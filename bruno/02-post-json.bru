@@ -1,0 +1,22 @@
+meta {
+  name: 02 - POST JSON
+  type: http
+  seq: 2
+}
+
+post {
+  url: https://httpbin.org/post
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "adherent": "A-001",
+    "creneau": 42
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "version": "1",
+  "name": "S08 - Salle de sport connectée",
+  "type": "collection",
+  "ignore": ["node_modules", ".git"]
+}
