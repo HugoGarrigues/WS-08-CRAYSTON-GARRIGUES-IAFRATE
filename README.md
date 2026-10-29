@@ -44,3 +44,58 @@ Tout le monde code sur l'ensemble des volets, avec un référent garant par doma
 2. **Confort de dev et documentation :** Le cadre offert par NestJS et TypeScript permet d'avoir un découpage clair et structurée des le départ. La documentation officielle est claire, bien réalisée, et les outils d'assistance ou même LLM la maîtrisent si on a besoin de déboguer ou autre.
 
 3. **Documentation d'API avec Swagger :** Swagger permettra de documenter l'API sans effort, avec une intégration simple à NestJS. La spec OpenAPI et Swagger UI se génèrent automatiquement. Swagger documente, Bruno reste le client.
+
+## Contrat OpenAPI — TP3
+
+Pour ce TP, on est repartis des ressources et des endpoints du TP2 pour écrire le fichier `openapi.yaml`. On y a décrit les huit ressources, les paramètres, les exemples de requêtes et les réponses, avec un format commun pour les erreurs :`application/problem+json`.
+
+On a aussi repris les routes de la partie sous-ressources et filtres, puis ajouté celles permettant de consulter une réservation ou un passage après sa création avec l'en-tête `Location`.
+
+### Vérification et documentation
+
+Les commandes sont à lancer à la racine du projet avec Node.js 22.
+
+Pour vérifier le contrat :
+
+```sh
+npx @stoplight/spectral-cli lint openapi.yaml
+```
+
+On obtient **0 erreur et 2 avertissements** : le contact n'est pas renseigné et la réponse générique `Probleme` n'est pas utilisée directement. Les endpoints utilisent les réponses d'erreur spécifiques, qui partagent le même schéma `Probleme`.
+
+Pour générer la documentation :
+
+```sh
+npx @redocly/cli build-docs openapi.yaml -o docs/index.html
+```
+
+La documentation se trouve dans [docs/index.html](docs/index.html). On a ouvert dans un navigateur pour vérifier les endpoints, les exemples et les réponses.
+
+### Tests avec le mock
+
+Prism nous permet de tester les requêtes avant d'avoir le serveur NestJS. Pour le démarrer :
+
+```sh
+npx @stoplight/prism-cli mock openapi.yaml
+```
+
+On laisse ce terminal ouvert. Dans un autre terminal on lance les trois requêtes avec Bruno CLI :
+
+```powershell
+cd bruno
+bru run 06-mock-lister-salles.bru 07-mock-creer-reservation.bru 08-mock-compteur-invalide.bru --env mock
+```
+
+L'environnement `mock` utilise `http://127.0.0.1:4010`. Le jeton fourni est fictif et sert seulement au mock.
+
+Les trois tests passent :
+
+- La liste des salles renvoie `200` avec une liste paginée.
+- La création d'une réservation renvoie `201` avec l'en-tête `Location`.
+- Le compteur envoyé avec une valeur négative et sans horodatage est refusé avec `422`. C'est le résultat attendu pour cette requête invalide.
+
+![Tests Bruno avec Prism](docs/mock.png)
+
+
+
+

@@ -1,0 +1,1904 @@
+openapi: 3.1.0
+info:
+  title: API Salle de sport connectée
+  version: 1.0.0
+  description: 'Contrat de la salle de sport connectée, fondé sur docs/design.md : réservations, accès par badge,
+    affluence et données IoT. Les opérations GET sont idempotentes. Les choix de sécurité et les règles métier non
+    précisés dans le TP2 sont documentés dans le README et devront être confirmés avant implémentation. Les dates-heures
+    incluent un fuseau ; les filtres journaliers utilisent Europe/Paris.'
+servers:
+- url: http://localhost:3000
+  description: Serveur de développement local
+tags:
+- name: Salles
+  description: Salles et occupation courante.
+- name: Cours
+  description: Catalogue des cours.
+- name: Machines
+  description: Équipements et compteurs IoT.
+- name: Creneaux
+  description: Planning des cours et machines.
+- name: Reservations
+  description: Réservations et annulations.
+- name: Adherents
+  description: Profil, historique et quota.
+- name: Abonnements
+  description: Contrats des adhérents.
+- name: Passages
+  description: Entrées enregistrées par les bornes.
+paths:
+  /salles:
+    get:
+      operationId: listerSalles
+      tags:
+      - Salles
+      summary: Lister les salles
+      description: 'Liste paginée, ordonnée par identifiant croissant. Rôles autorisés : adherent, admin.'
+      x-roles:
+      - adherent
+      - admin
+      x-idempotent: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Taille'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '200':
+          description: Page de résultats.
+          headers:
+            RateLimit-Limit: &id001
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining: &id002
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset: &id003
+              $ref: '#/components/headers/RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SallePage'
+              example:
+                items:
+                - &id009
+                  id: 00000000-0000-4000-8000-000000000001
+                  nom: Salle Aix Centre
+                  adresse: 10 avenue du Sport, Aix-en-Provence
+                  capacite: 100
+                  dateCreation: '2026-10-29T08:00:00+01:00'
+                page: 1
+                taille: 20
+                total: 1
+  /cours:
+    get:
+      operationId: listerCours
+      tags:
+      - Cours
+      summary: Lister les cours
+      description: 'Liste paginée, ordonnée par identifiant croissant. Rôles autorisés : adherent, admin.'
+      x-roles:
+      - adherent
+      - admin
+      x-idempotent: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Taille'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '200':
+          description: Page de résultats.
+          headers:
+            RateLimit-Limit: *id001
+            RateLimit-Remaining: *id002
+            RateLimit-Reset: *id003
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoursPage'
+              example:
+                items:
+                - &id011
+                  id: 00000000-0000-4000-8000-000000000002
+                  nom: Yoga
+                  description: Cours collectif de yoga.
+                  dateCreation: '2026-10-29T08:00:00+01:00'
+                page: 1
+                taille: 20
+                total: 1
+  /machines:
+    get:
+      operationId: listerMachines
+      tags:
+      - Machines
+      summary: Lister les machines
+      description: 'Liste paginée, ordonnée par identifiant croissant. Rôles autorisés : adherent, admin.'
+      x-roles:
+      - adherent
+      - admin
+      x-idempotent: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - name: salle
+        in: query
+        description: Filtrer par salle ; sans filtre, inclut les machines en stock.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-4000-8000-000000000002
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Taille'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '200':
+          description: Page de résultats.
+          headers:
+            RateLimit-Limit: *id001
+            RateLimit-Remaining: *id002
+            RateLimit-Reset: *id003
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MachinePage'
+              example:
+                items:
+                - &id007
+                  id: 00000000-0000-4000-8000-000000000002
+                  salleId: 00000000-0000-4000-8000-000000000001
+                  nom: Vélo 1
+                  statut: disponible
+                  compteurUtilisations: 42
+                  dateCreation: '2026-10-29T08:00:00+01:00'
+                page: 1
+                taille: 20
+                total: 1
+  /salles/{salleId}/creneaux:
+    get:
+      operationId: listerCreneauxSalle
+      tags:
+      - Creneaux
+      summary: Consulter le planning d'une salle
+      description: 'Liste paginée, ordonnée par identifiant croissant. Rôles autorisés : adherent, admin.'
+      x-roles:
+      - adherent
+      - admin
+      x-idempotent: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/salleId'
+      - $ref: '#/components/parameters/Date'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Taille'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '200':
+          description: Page de résultats.
+          headers:
+            RateLimit-Limit: *id001
+            RateLimit-Remaining: *id002
+            RateLimit-Reset: *id003
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreneauPage'
+              example:
+                items:
+                - &id006
+                  id: 00000000-0000-4000-8000-000000000003
+                  salleId: 00000000-0000-4000-8000-000000000001
+                  machineId: 00000000-0000-4000-8000-000000000002
+                  coursId: null
+                  libelle: Vélo 1
+                  debut: '2026-10-29T18:00:00+01:00'
+                  fin: '2026-10-29T19:00:00+01:00'
+                  capacite: 1
+                  dateCreation: '2026-10-29T08:00:00+01:00'
+                page: 1
+                taille: 20
+                total: 1
+  /adherents/{adherentId}/abonnements:
+    get:
+      operationId: listerAbonnementsAdherent
+      tags:
+      - Abonnements
+      summary: Consulter ses abonnements
+      description: 'L’adhérent consulte uniquement ses propres abonnements ; l’admin peut consulter ceux de tous
+        les adhérents. Rôles autorisés : adherent, admin.'
+      x-roles:
+      - adherent
+      - admin
+      x-idempotent: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/adherentId'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Taille'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '200':
+          description: Page de résultats.
+          headers:
+            RateLimit-Limit: *id001
+            RateLimit-Remaining: *id002
+            RateLimit-Reset: *id003
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AbonnementPage'
+              example:
+                items:
+                - &id008
+                  id: 00000000-0000-4000-8000-000000000003
+                  adherentId: 00000000-0000-4000-8000-000000000002
+                  formule: basic
+                  debut: '2026-10-29T08:00:00+01:00'
+                  fin: '2027-10-29T08:00:00+01:00'
+                  quotaReservationsJournalier: 2
+                  dateCreation: '2026-10-29T08:00:00+01:00'
+                page: 1
+                taille: 20
+                total: 1
+  /reservations:
+    get:
+      operationId: listerReservations
+      tags:
+      - Reservations
+      summary: Consulter les réservations
+      description: 'Filtres combinables. L’adhérent ne voit que ses réservations ; le filtre adherent ne permet
+        pas de consulter un autre adhérent. L’admin peut consulter toutes les réservations. Le filtre date porte
+        sur le début du créneau en Europe/Paris. Rôles autorisés : adherent, admin.'
+      x-roles:
+      - adherent
+      - admin
+      x-idempotent: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - name: adherent
+        in: query
+        description: Filtrer par adhérent.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-4000-8000-000000000002
+      - name: creneau
+        in: query
+        description: Filtrer par créneau.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-4000-8000-000000000002
+      - $ref: '#/components/parameters/Date'
+      - name: statut
+        in: query
+        schema:
+          type: string
+          enum:
+          - active
+          - annulee
+          - terminee
+        description: Filtrer par statut.
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Taille'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '200':
+          description: Page de résultats.
+          headers:
+            RateLimit-Limit: *id001
+            RateLimit-Remaining: *id002
+            RateLimit-Reset: *id003
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationPage'
+              example:
+                items:
+                - &id004
+                  id: 00000000-0000-4000-8000-000000000001
+                  adherentId: 00000000-0000-4000-8000-000000000002
+                  creneauId: 00000000-0000-4000-8000-000000000003
+                  statut: active
+                  dateCreation: '2026-10-29T08:00:00+01:00'
+                page: 1
+                taille: 20
+                total: 1
+    post:
+      operationId: creerReservation
+      tags:
+      - Reservations
+      summary: Réserver un créneau
+      description: 'L’adhérent est déduit du jeton. Vérifie atomiquement disponibilité et quota côté serveur. 404
+        si créneau absent ; 409 si complet, déjà réservé ou non réservable ; 429 si quota ou limite technique atteint.
+        POST non idempotent : ne pas rejouer automatiquement après un délai dépassé. Rôles autorisés : adherent.'
+      x-roles:
+      - adherent
+      x-idempotent: false
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '409':
+          $ref: '#/components/responses/Conflit'
+        '422':
+          $ref: '#/components/responses/DonneesInvalides'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '201':
+          description: Réservation créée.
+          headers:
+            RateLimit-Limit: *id001
+            RateLimit-Remaining: *id002
+            RateLimit-Reset: *id003
+            Location:
+              description: URI de la réservation créée.
+              required: true
+              schema:
+                type: string
+                format: uri-reference
+              example: /reservations/00000000-0000-4000-8000-000000000001
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+              example: *id004
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationCreation'
+            example:
+              creneauId: 00000000-0000-4000-8000-000000000003
+  /passages:
+    get:
+      operationId: listerPassages
+      tags:
+      - Passages
+      summary: Consulter les passages
+      description: 'L’adhérent ne voit que ses passages ; l’admin peut consulter le journal. Tri par dateEntree
+        décroissante puis identifiant. Rôles autorisés : adherent, admin.'
+      x-roles:
+      - adherent
+      - admin
+      x-idempotent: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - name: adherent
+        in: query
+        description: Filtrer par adhérent.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-4000-8000-000000000002
+      - $ref: '#/components/parameters/Date'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Taille'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '200':
+          description: Page de résultats.
+          headers:
+            RateLimit-Limit: *id001
+            RateLimit-Remaining: *id002
+            RateLimit-Reset: *id003
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassagePage'
+              example:
+                items:
+                - &id005
+                  id: 00000000-0000-4000-8000-000000000003
+                  adherentId: 00000000-0000-4000-8000-000000000002
+                  salleId: 00000000-0000-4000-8000-000000000001
+                  dateEntree: '2026-10-29T08:00:00+01:00'
+                page: 1
+                taille: 20
+                total: 1
+  /salles/{salleId}/passages:
+    get:
+      operationId: listerPassagesSalle
+      tags:
+      - Passages
+      summary: Consulter les passages d’une salle
+      description: 'Liste paginée, ordonnée par identifiant croissant. Rôles autorisés : admin.'
+      x-roles:
+      - admin
+      x-idempotent: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/salleId'
+      - $ref: '#/components/parameters/Date'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Taille'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '200':
+          description: Page de résultats.
+          headers:
+            RateLimit-Limit: *id001
+            RateLimit-Remaining: *id002
+            RateLimit-Reset: *id003
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassagePage'
+              example:
+                items:
+                - *id005
+                page: 1
+                taille: 20
+                total: 1
+    post:
+      operationId: enregistrerPassage
+      tags:
+      - Passages
+      summary: Entrer avec son badge
+      description: 'La borne doit être autorisée pour cette salle. Le badge détermine l’adhérent. 403 si abonnement
+        ou badge ne permet pas l’accès ; 404 si salle ou badge inconnu. La borne fournit l’horodatage de lecture.
+        Un accès refusé ne crée pas de passage. POST non idempotent. Rôles autorisés : borne.'
+      x-roles:
+      - borne
+      x-idempotent: false
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/salleId'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '422':
+          $ref: '#/components/responses/DonneesInvalides'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '201':
+          description: Entrée enregistrée.
+          headers:
+            RateLimit-Limit: *id001
+            RateLimit-Remaining: *id002
+            RateLimit-Reset: *id003
+            Location:
+              description: URI du passage enregistré.
+              required: true
+              schema:
+                type: string
+                format: uri-reference
+              example: /salles/00000000-0000-4000-8000-000000000001/passages/00000000-0000-4000-8000-000000000003
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Passage'
+              example: *id005
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PassageCreation'
+            example:
+              badgeId: badge-demo-001
+              horodatage: '2026-10-29T08:00:00+01:00'
+  /creneaux:
+    get:
+      operationId: listerCreneaux
+      tags:
+      - Creneaux
+      summary: Consulter les créneaux de cours ou de machines
+      description: 'Liste paginée avec références aux machines et aux cours ; les filtres machine et cours sont
+        mutuellement exclusifs (400). Une référence de filtre inexistante renvoie 404 ; une recherche sans résultat
+        renvoie une page vide. Les réservations effectives d’un créneau se consultent via GET /reservations?creneau={id},
+        selon les droits. Tri par début croissant puis identifiant. Rôles autorisés : adherent, admin.'
+      x-roles:
+      - adherent
+      - admin
+      x-idempotent: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - name: machine
+        in: query
+        description: Filtrer par machine ; combinable avec date pour le planning journalier.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-4000-8000-000000000002
+      - name: cours
+        in: query
+        description: Filtrer par cours.
+        schema:
+          type: string
+          format: uuid
+        example: 00000000-0000-4000-8000-000000000002
+      - $ref: '#/components/parameters/Date'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Taille'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '200':
+          description: Page de résultats.
+          headers:
+            RateLimit-Limit: *id001
+            RateLimit-Remaining: *id002
+            RateLimit-Reset: *id003
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreneauPage'
+              example:
+                items:
+                - *id006
+                page: 1
+                taille: 20
+                total: 1
+  /adherents/{adherentId}/historique:
+    get:
+      operationId: consulterHistorique
+      tags:
+      - Adherents
+      summary: Consulter son historique
+      description: 'Historique commun de ses réservations et passages, paginé dans son ensemble. Chaque élément
+        est une réservation ou un passage. Tri décroissant sur dateCreation ou dateEntree puis identifiant. L’adhérent
+        doit correspondre au jeton. Rôles autorisés : adherent.'
+      x-roles:
+      - adherent
+      x-idempotent: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/adherentId'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Taille'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '200':
+          description: Page de résultats.
+          headers:
+            RateLimit-Limit: *id001
+            RateLimit-Remaining: *id002
+            RateLimit-Reset: *id003
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoriquePage'
+              example:
+                items:
+                - *id004
+                page: 1
+                taille: 20
+                total: 1
+  /adherents/{adherentId}:
+    get:
+      operationId: consulterAdherent
+      tags:
+      - Adherents
+      summary: Consulter un profil
+      description: 'Consultation idempotente de la ressource. Un adhérent ne peut consulter que ses propres données
+        ; un admin autorisé peut consulter les autres profils et abonnements. Rôles autorisés : adherent, admin.'
+      x-roles:
+      - adherent
+      - admin
+      x-idempotent: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/adherentId'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '200':
+          description: Ressource trouvée.
+          headers:
+            RateLimit-Limit: *id001
+            RateLimit-Remaining: *id002
+            RateLimit-Reset: *id003
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Adherent'
+              example: &id010
+                id: 00000000-0000-4000-8000-000000000002
+                prenom: Camille
+                nom: Martin
+                email: camille@example.com
+                badgeId: badge-demo-001
+                dateCreation: '2026-10-29T08:00:00+01:00'
+  /machines/{machineId}:
+    get:
+      operationId: consulterMachine
+      tags:
+      - Machines
+      summary: Consulter une machine
+      description: 'Consultation idempotente de la ressource. Rôles autorisés : adherent, admin.'
+      x-roles:
+      - adherent
+      - admin
+      x-idempotent: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/machineId'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '200':
+          description: Ressource trouvée.
+          headers:
+            RateLimit-Limit: *id001
+            RateLimit-Remaining: *id002
+            RateLimit-Reset: *id003
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Machine'
+              example: *id007
+  /abonnements/{abonnementId}:
+    get:
+      operationId: consulterAbonnement
+      tags:
+      - Abonnements
+      summary: Consulter un abonnement
+      description: 'Consultation idempotente de la ressource. Un adhérent ne peut consulter que ses propres données
+        ; un admin autorisé peut consulter les autres profils et abonnements. Rôles autorisés : adherent, admin.'
+      x-roles:
+      - adherent
+      - admin
+      x-idempotent: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/abonnementId'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '200':
+          description: Ressource trouvée.
+          headers:
+            RateLimit-Limit: *id001
+            RateLimit-Remaining: *id002
+            RateLimit-Reset: *id003
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Abonnement'
+              example: *id008
+  /salles/{salleId}/affluence:
+    get:
+      operationId: consulterAffluence
+      tags:
+      - Salles
+      summary: Consulter l’affluence courante
+      description: 'Consultation idempotente de la ressource. La source de comptage des sorties doit être définie
+        avant implémentation ; le journal des entrées seul ne suffit pas. Rôles autorisés : adherent.'
+      x-roles:
+      - adherent
+      x-idempotent: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/salleId'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '200':
+          description: Ressource trouvée.
+          headers:
+            RateLimit-Limit: *id001
+            RateLimit-Remaining: *id002
+            RateLimit-Reset: *id003
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Affluence'
+              example: &id012
+                salleId: 00000000-0000-4000-8000-000000000001
+                nombrePresents: 24
+                capacite: 100
+                horodatage: '2026-10-29T08:00:00+01:00'
+  /adherents/{adherentId}/quota:
+    get:
+      operationId: consulterQuota
+      tags:
+      - Adherents
+      summary: Consulter son quota journalier
+      description: 'Consultation idempotente de la ressource. Un adhérent ne peut consulter que ses propres données
+        ; un admin autorisé peut consulter les autres profils et abonnements. Rôles autorisés : adherent.'
+      x-roles:
+      - adherent
+      x-idempotent: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/adherentId'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '200':
+          description: Ressource trouvée.
+          headers:
+            RateLimit-Limit: *id001
+            RateLimit-Remaining: *id002
+            RateLimit-Reset: *id003
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quota'
+              example: &id013
+                adherentId: 00000000-0000-4000-8000-000000000002
+                date: '2026-10-29'
+                formule: basic
+                limite: 2
+                consomme: 1
+                restant: 1
+                reinitialisation: '2026-10-30T00:00:00+01:00'
+  /reservations/{reservationId}:
+    get:
+      operationId: consulterReservation
+      tags:
+      - Reservations
+      summary: Consulter une réservation
+      description: 'Un adhérent ne peut consulter que sa réservation ; l’admin peut consulter les autres. Rôles
+        autorisés : adherent, admin.'
+      x-roles:
+      - adherent
+      - admin
+      x-idempotent: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/reservationId'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '200':
+          description: Réservation trouvée.
+          headers:
+            RateLimit-Limit: *id001
+            RateLimit-Remaining: *id002
+            RateLimit-Reset: *id003
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+              example: *id004
+  /reservations/{reservationId}/annulation:
+    post:
+      operationId: annulerReservation
+      tags:
+      - Reservations
+      summary: Annuler sa réservation
+      description: 'Opération idempotente : une réservation déjà annulée renvoie encore 204. Une réservation terminée
+        renvoie 409. Seul le propriétaire peut annuler. Aucun corps de requête ni de réponse. Rôles autorisés :
+        adherent.'
+      x-roles:
+      - adherent
+      x-idempotent: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/reservationId'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '409':
+          $ref: '#/components/responses/Conflit'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '204':
+          description: Réservation annulée ou déjà annulée.
+          headers:
+            RateLimit-Limit: *id001
+            RateLimit-Remaining: *id002
+            RateLimit-Reset: *id003
+  /salles/{salleId}/passages/{passageId}:
+    get:
+      operationId: consulterPassage
+      tags:
+      - Passages
+      summary: Consulter un passage
+      description: 'Le passage doit appartenir à la salle. L’adhérent consulte uniquement ses propres passages ;
+        la borne est limitée à sa salle. Rôles autorisés : adherent, admin, borne.'
+      x-roles:
+      - adherent
+      - admin
+      - borne
+      x-idempotent: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/salleId'
+      - $ref: '#/components/parameters/passageId'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '200':
+          description: Passage trouvé.
+          headers:
+            RateLimit-Limit: *id001
+            RateLimit-Remaining: *id002
+            RateLimit-Reset: *id003
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Passage'
+              example: *id005
+  /machines/{machineId}/compteur:
+    put:
+      operationId: mettreAJourCompteur
+      tags:
+      - Machines
+      summary: Transmettre le compteur d’une machine
+      description: 'La borne est autorisée pour la machine. Valeur absolue cumulative. Rejouer le même couple valeur/horodatage
+        renvoie 204 sans effet supplémentaire. 409 si la mesure est plus ancienne, si la valeur régresse ou si le
+        même horodatage porte une autre valeur. Les remises à zéro ne sont pas couvertes par cette opération. Rôles
+        autorisés : borne.'
+      x-roles:
+      - borne
+      x-idempotent: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/machineId'
+      responses:
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/AccesInterdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '409':
+          $ref: '#/components/responses/Conflit'
+        '422':
+          $ref: '#/components/responses/DonneesInvalides'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+        '204':
+          description: Compteur enregistré ou mesure identique déjà enregistrée.
+          headers:
+            RateLimit-Limit: *id001
+            RateLimit-Remaining: *id002
+            RateLimit-Reset: *id003
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompteurMiseAJour'
+            example:
+              valeur: 43
+              horodatage: '2026-10-29T08:00:00+01:00'
+components:
+  responses:
+    Probleme:
+      description: Erreur décrite dans le format commun de l'API.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Probleme'
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+            detail: La requête ne peut pas être traitée.
+            instance: /reservations
+    RequeteInvalide:
+      description: Requête mal formée ou paramètres invalides.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Probleme'
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+            detail: Le paramètre taille doit être un entier positif.
+            instance: /salles?taille=-1
+    NonAuthentifie:
+      description: Authentification absente ou invalide.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Probleme'
+          example:
+            type: about:blank
+            title: Unauthorized
+            status: 401
+            detail: Une authentification valide est nécessaire pour cette opération.
+            instance: /reservations
+      headers:
+        WWW-Authenticate:
+          description: Schéma d’authentification attendu.
+          schema:
+            type: string
+          example: Bearer
+    AccesInterdit:
+      description: L'identité authentifiée n'est pas autorisée à effectuer cette opération.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Probleme'
+          example:
+            type: about:blank
+            title: Forbidden
+            status: 403
+            detail: Vous ne pouvez pas consulter les réservations de cet adhérent.
+            instance: /reservations
+    Introuvable:
+      description: La ressource demandée n'existe pas.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Probleme'
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            detail: Aucune salle ne correspond à cet identifiant.
+            instance: /salles/00000000-0000-4000-8000-000000000001
+    Conflit:
+      description: L'opération est incompatible avec l'état actuel des ressources.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Probleme'
+          example:
+            type: about:blank
+            title: Conflict
+            status: 409
+            detail: Le créneau est complet.
+            instance: /reservations
+    DonneesInvalides:
+      description: Le corps est lisible mais ne respecte pas les contraintes attendues.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Probleme'
+          example:
+            type: about:blank
+            title: Unprocessable Content
+            status: 422
+            detail: La fin du créneau doit être postérieure à son début.
+            instance: /creneaux
+    TropDeRequetes:
+      description: Limite de requêtes ou quota de réservations atteint. Le détail indique la limite concernée ;
+        Retry-After indique le délai avant une nouvelle tentative. Les en-têtes RateLimit-* décrivent la limite
+        technique ; le quota métier est consultable via /adherents/{adherentId}/quota.
+      headers:
+        Retry-After:
+          description: Nombre de secondes à attendre avant une nouvelle tentative.
+          schema:
+            type: integer
+            minimum: 0
+          example: 60
+        RateLimit-Limit: *id001
+        RateLimit-Remaining: *id002
+        RateLimit-Reset: *id003
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Probleme'
+          example:
+            type: about:blank
+            title: Too Many Requests
+            status: 429
+            detail: La limite de requêtes est atteinte. Réessayez dans 60 secondes.
+            instance: /reservations
+  schemas:
+    Probleme:
+      type: object
+      description: Format commun des erreurs. status doit correspondre au statut HTTP de la réponse. instance identifie
+        l'occurrence du problème ; les exemples utilisent l'URI de la requête. Aucun détail technique interne n'est
+        exposé.
+      additionalProperties: false
+      required:
+      - type
+      - title
+      - status
+      - detail
+      - instance
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          description: URI du type de problème ; about:blank pour un statut HTTP générique.
+        title:
+          type: string
+          minLength: 1
+          description: Résumé stable du type de problème.
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+          minLength: 1
+          description: Explication de cette occurrence destinée au client.
+        instance:
+          type: string
+          format: uri-reference
+          description: URI identifiant cette occurrence du problème.
+    Salle:
+      type: object
+      description: Salle de sport appartenant à la chaîne.
+      additionalProperties: false
+      required:
+      - id
+      - nom
+      - adresse
+      - capacite
+      - dateCreation
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nom:
+          type: string
+          minLength: 1
+          maxLength: 100
+        adresse:
+          type: string
+          minLength: 1
+          maxLength: 255
+        capacite:
+          type: integer
+          minimum: 1
+          description: Nombre maximal d'adhérents présents simultanément.
+        dateCreation:
+          type: string
+          format: date-time
+          readOnly: true
+      examples:
+      - *id009
+    Machine:
+      type: object
+      description: Équipement d'une salle et compteur d'utilisation remonté par l'IoT.
+      additionalProperties: false
+      required:
+      - id
+      - salleId
+      - nom
+      - statut
+      - compteurUtilisations
+      - dateCreation
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        salleId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: Null lorsque la machine est en stock, sans salle affectée.
+        nom:
+          type: string
+          minLength: 1
+          maxLength: 100
+        statut:
+          type: string
+          enum:
+          - disponible
+          - maintenance
+          - hors_service
+        compteurUtilisations:
+          type: integer
+          minimum: 0
+          readOnly: true
+        dateCreation:
+          type: string
+          format: date-time
+          readOnly: true
+      examples:
+      - *id007
+    Creneau:
+      type: object
+      description: Créneau de cours ou de machine. Un seul de coursId et machineId est non nul. La fin est postérieure
+        au début. La machine, le cas échéant, appartient à la salle.
+      additionalProperties: false
+      required:
+      - id
+      - salleId
+      - machineId
+      - libelle
+      - debut
+      - fin
+      - capacite
+      - dateCreation
+      - coursId
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        salleId:
+          type: string
+          format: uuid
+        machineId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        libelle:
+          type: string
+          minLength: 1
+          maxLength: 100
+        debut:
+          type: string
+          format: date-time
+        fin:
+          type: string
+          format: date-time
+        capacite:
+          type: integer
+          minimum: 1
+          description: Nombre maximal de réservations actives sur ce créneau.
+        dateCreation:
+          type: string
+          format: date-time
+          readOnly: true
+        coursId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+      oneOf:
+      - properties:
+          machineId:
+            type: string
+            format: uuid
+          coursId:
+            type: 'null'
+      - properties:
+          machineId:
+            type: 'null'
+          coursId:
+            type: string
+            format: uuid
+      examples:
+      - *id006
+    Reservation:
+      type: object
+      description: Réservation d'un créneau par un adhérent.
+      additionalProperties: false
+      required:
+      - id
+      - adherentId
+      - creneauId
+      - statut
+      - dateCreation
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        adherentId:
+          type: string
+          format: uuid
+        creneauId:
+          type: string
+          format: uuid
+        statut:
+          type: string
+          enum:
+          - active
+          - annulee
+          - terminee
+          readOnly: true
+          description: État géré par le serveur lors de la création et des transitions métier.
+        dateCreation:
+          type: string
+          format: date-time
+          readOnly: true
+      examples:
+      - *id004
+    Abonnement:
+      type: object
+      description: 'Abonnement d?un adh?rent. La fin doit ?tre post?rieure au d?but. Proposition de contrat : quota
+        journalier de 2 cr?ations de r?servation pour Basic et de 5 pour Premium, calcul? et contr?l? par le serveur.'
+      additionalProperties: false
+      required:
+      - id
+      - adherentId
+      - formule
+      - debut
+      - fin
+      - quotaReservationsJournalier
+      - dateCreation
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        adherentId:
+          type: string
+          format: uuid
+        formule:
+          type: string
+          enum:
+          - basic
+          - premium
+        debut:
+          type: string
+          format: date-time
+        fin:
+          type: string
+          format: date-time
+        quotaReservationsJournalier:
+          type: integer
+          enum:
+          - 2
+          - 5
+          minimum: 2
+          maximum: 5
+          readOnly: true
+          description: Valeur dérivée de la formule ; le client ne choisit pas son quota.
+        dateCreation:
+          type: string
+          format: date-time
+          readOnly: true
+      examples:
+      - *id008
+    Passage:
+      type: object
+      description: Entrée autorisée après lecture du badge ; un accès refusé ne crée pas de passage.
+      additionalProperties: false
+      required:
+      - id
+      - adherentId
+      - salleId
+      - dateEntree
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        adherentId:
+          type: string
+          format: uuid
+        salleId:
+          type: string
+          format: uuid
+        dateEntree:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Horodatage fourni par la borne et validé par le serveur.
+      examples:
+      - *id005
+    Adherent:
+      type: object
+      description: Adhérent identifié par un badge NFC opaque.
+      additionalProperties: false
+      required:
+      - id
+      - prenom
+      - nom
+      - email
+      - badgeId
+      - dateCreation
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        prenom:
+          type: string
+          minLength: 1
+          maxLength: 100
+        nom:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        badgeId:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: Identifiant opaque du badge ; ce n'est pas un secret d'authentification.
+        dateCreation:
+          type: string
+          format: date-time
+          readOnly: true
+      examples:
+      - *id010
+    Cours:
+      type: object
+      description: Cours collectif proposé dans le planning.
+      additionalProperties: false
+      required:
+      - id
+      - nom
+      - description
+      - dateCreation
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nom:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 1000
+        dateCreation:
+          type: string
+          format: date-time
+          readOnly: true
+      examples:
+      - *id011
+    ReservationCreation:
+      type: object
+      description: Identité de l’adhérent déduite du jeton ; quota contrôlé par le serveur.
+      additionalProperties: false
+      required:
+      - creneauId
+      properties:
+        creneauId:
+          type: string
+          format: uuid
+    PassageCreation:
+      type: object
+      description: Lecture de badge transmise par la borne de la salle.
+      additionalProperties: false
+      required:
+      - badgeId
+      - horodatage
+      properties:
+        badgeId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        horodatage:
+          type: string
+          format: date-time
+    CompteurMiseAJour:
+      type: object
+      description: Valeur absolue cumulative, jamais un incrément. Horodatage de la mesure.
+      additionalProperties: false
+      required:
+      - valeur
+      - horodatage
+      properties:
+        valeur:
+          type: integer
+          minimum: 0
+        horodatage:
+          type: string
+          format: date-time
+    Affluence:
+      type: object
+      description: Instantané de présence ; la source de mesure des sorties reste à définir avant le serveur.
+      additionalProperties: false
+      required:
+      - salleId
+      - nombrePresents
+      - capacite
+      - horodatage
+      properties:
+        salleId:
+          type: string
+          format: uuid
+        nombrePresents:
+          type: integer
+          minimum: 0
+        capacite:
+          type: integer
+          minimum: 1
+        horodatage:
+          type: string
+          format: date-time
+      examples:
+      - *id012
+    Quota:
+      type: object
+      description: 'Quota journalier calculé par le serveur. Journée civile Europe/Paris. Proposition : une annulation
+        ne restitue pas une réservation au quota. Proposition : le quota compte les cr?ations de r?servation effectu?es
+        pendant la journ?e, ind?pendamment du jour du cr?neau.'
+      additionalProperties: false
+      required:
+      - adherentId
+      - date
+      - formule
+      - limite
+      - consomme
+      - restant
+      - reinitialisation
+      properties:
+        adherentId:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        formule:
+          type: string
+          enum:
+          - basic
+          - premium
+        limite:
+          type: integer
+          enum:
+          - 2
+          - 5
+        consomme:
+          type: integer
+          minimum: 0
+          maximum: 5
+        restant:
+          type: integer
+          minimum: 0
+          maximum: 5
+        reinitialisation:
+          type: string
+          format: date-time
+      examples:
+      - *id013
+    SallePage:
+      type: object
+      description: Page de résultats ; page vide si aucun élément ne correspond.
+      additionalProperties: false
+      required:
+      - items
+      - page
+      - taille
+      - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Salle'
+        page:
+          type: integer
+          minimum: 1
+        taille:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+    CoursPage:
+      type: object
+      description: Page de résultats ; page vide si aucun élément ne correspond.
+      additionalProperties: false
+      required:
+      - items
+      - page
+      - taille
+      - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Cours'
+        page:
+          type: integer
+          minimum: 1
+        taille:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+    MachinePage:
+      type: object
+      description: Page de résultats ; page vide si aucun élément ne correspond.
+      additionalProperties: false
+      required:
+      - items
+      - page
+      - taille
+      - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Machine'
+        page:
+          type: integer
+          minimum: 1
+        taille:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+    CreneauPage:
+      type: object
+      description: Page de résultats ; page vide si aucun élément ne correspond.
+      additionalProperties: false
+      required:
+      - items
+      - page
+      - taille
+      - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Creneau'
+        page:
+          type: integer
+          minimum: 1
+        taille:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+    AbonnementPage:
+      type: object
+      description: Page de résultats ; page vide si aucun élément ne correspond.
+      additionalProperties: false
+      required:
+      - items
+      - page
+      - taille
+      - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Abonnement'
+        page:
+          type: integer
+          minimum: 1
+        taille:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+    ReservationPage:
+      type: object
+      description: Page de résultats ; page vide si aucun élément ne correspond.
+      additionalProperties: false
+      required:
+      - items
+      - page
+      - taille
+      - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reservation'
+        page:
+          type: integer
+          minimum: 1
+        taille:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+    PassagePage:
+      type: object
+      description: Page de résultats ; page vide si aucun élément ne correspond.
+      additionalProperties: false
+      required:
+      - items
+      - page
+      - taille
+      - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Passage'
+        page:
+          type: integer
+          minimum: 1
+        taille:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+    HistoriquePage:
+      type: object
+      description: Page de résultats ; page vide si aucun élément ne correspond.
+      additionalProperties: false
+      required:
+      - items
+      - page
+      - taille
+      - total
+      properties:
+        items:
+          type: array
+          items:
+            oneOf:
+            - $ref: '#/components/schemas/Reservation'
+            - $ref: '#/components/schemas/Passage'
+        page:
+          type: integer
+          minimum: 1
+        taille:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: 'Choix de contrat à confirmer : jeton opaque pour adhérent, admin ou borne. Le serveur vérifie
+        le rôle et la propriété des ressources ; aucun jeton réel n’est fourni.'
+  parameters:
+    Page:
+      name: page
+      in: query
+      description: Numéro de page, à partir de 1.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Taille:
+      name: taille
+      in: query
+      description: Nombre maximal d’éléments par page.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    Date:
+      name: date
+      in: query
+      description: Jour civil dans le fuseau Europe/Paris.
+      schema:
+        type: string
+        format: date
+      example: '2026-10-29'
+    RequestId:
+      name: X-Request-Id
+      in: header
+      description: Identifiant de corrélation facultatif, sans effet sur l’idempotence.
+      schema:
+        type: string
+        format: uuid
+      example: 00000000-0000-4000-8000-000000000001
+    salleId:
+      name: salleId
+      in: path
+      required: true
+      description: Identifiant UUID de la ressource.
+      schema:
+        type: string
+        format: uuid
+      example: 00000000-0000-4000-8000-000000000001
+    adherentId:
+      name: adherentId
+      in: path
+      required: true
+      description: Identifiant UUID de la ressource.
+      schema:
+        type: string
+        format: uuid
+      example: 00000000-0000-4000-8000-000000000001
+    reservationId:
+      name: reservationId
+      in: path
+      required: true
+      description: Identifiant UUID de la ressource.
+      schema:
+        type: string
+        format: uuid
+      example: 00000000-0000-4000-8000-000000000001
+    machineId:
+      name: machineId
+      in: path
+      required: true
+      description: Identifiant UUID de la ressource.
+      schema:
+        type: string
+        format: uuid
+      example: 00000000-0000-4000-8000-000000000001
+    abonnementId:
+      name: abonnementId
+      in: path
+      required: true
+      description: Identifiant UUID de la ressource.
+      schema:
+        type: string
+        format: uuid
+      example: 00000000-0000-4000-8000-000000000001
+    passageId:
+      name: passageId
+      in: path
+      required: true
+      description: Identifiant du passage.
+      schema:
+        type: string
+        format: uuid
+      example: 00000000-0000-4000-8000-000000000003
+  headers:
+    RateLimit-Limit:
+      description: Nombre de requêtes autorisées dans la fenêtre technique.
+      schema:
+        type: integer
+        minimum: 1
+      example: 100
+    RateLimit-Remaining:
+      description: Nombre de requêtes techniques restantes dans cette fenêtre.
+      schema:
+        type: integer
+        minimum: 0
+      example: 99
+    RateLimit-Reset:
+      description: Secondes avant la réinitialisation de la fenêtre technique.
+      schema:
+        type: integer
+        minimum: 0
+      example: 60
+security:
+- bearerAuth: []

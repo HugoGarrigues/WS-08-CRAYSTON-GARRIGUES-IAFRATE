@@ -1,0 +1,23 @@
+meta {
+  name: 06 - Mock - Lister les salles
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/salles?page=1&taille=20
+  body: none
+  auth: none
+}
+
+headers {
+  Accept: application/json
+  Authorization: Bearer {{mockToken}}
+}
+
+tests {
+  test("La liste des salles renvoie 200 et une page", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().items).to.be.an("array");
+  });
+}
