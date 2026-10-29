@@ -59,3 +59,21 @@ Pour choisir entre sous-ressource et filtre nous avons appliqué une règle simp
 | Cours → Créneau | Filtre | `GET /creneaux?cours={id}` | Un créneau peut être soit un cours, soit une machine. |
 
 Au final, on se retrouve donc avec trois sous-ressources et six filtres.
+
+## 2. Table des endpoints
+
+| User story | Méthode | URI | Rôle autorisé | Corps de requête | Succès | Erreurs |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Réserver un créneau | `POST` | `/reservations` | adhérent | `creneauId` | `201` + `Location` | `404`, `409`, `429` |
+| Annuler | `POST` * | `/reservations/{reservationId}/annulation` | adhérent | — | `204` | `404`, `409` |
+| Consulter l'affluence en temps réel | `GET` * | `/salles/{salleId}/affluence` | adhérent | — | `200` | `404` |
+| Consulter son historique | `GET` * | `/adherents/{adherentId}/historique` | adhérent | — | `200` | `404` |
+| Consulter le profil d'un utilisateur | `GET` * | `/adherents/{adherentId}` | adhérent, admin | — | `200` | `404` |
+| Consulter les réservations d'une machine pour la journée | `GET` * | `/creneaux?machine={id}&date={date}` | adhérent, admin | — | `200` | `404` |
+| Entrer avec son badge | `POST` | `/salles/{salleId}/passages` | borne | `badgeId`, `horodatage` | `201` + `Location` | `403`, `404`, `429` |
+| Compteur machine | `PUT` * | `/machines/{machineId}/compteur` | borne | `valeur`, `horodatage` | `204` | `404`, `409`, `429` |
+| Contrainte propre | `GET` * | `/adherents/{adherentId}/quota` | adhérent | — | `200` | `404` |
+
+## 3. Revue Croisée 
+
+ToDO
