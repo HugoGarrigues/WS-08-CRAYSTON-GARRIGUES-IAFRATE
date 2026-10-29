@@ -1,0 +1,30 @@
+meta {
+  name: 08 - Mock - Compteur invalide
+  type: http
+  seq: 8
+}
+
+put {
+  url: {{baseUrl}}/machines/00000000-0000-4000-8000-000000000001/compteur
+  body: json
+  auth: none
+}
+
+headers {
+  Accept: application/problem+json
+  Content-Type: application/json
+  Authorization: Bearer {{mockToken}}
+}
+
+body:json {
+  {
+    "valeur": -1
+  }
+}
+
+tests {
+  test("Prism refuse le corps invalide avec 422", function () {
+    expect(res.getStatus()).to.equal(422);
+    expect(res.getBody().status).to.equal(422);
+  });
+}
