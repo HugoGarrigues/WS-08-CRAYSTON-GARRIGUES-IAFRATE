@@ -1,0 +1,31 @@
+meta {
+  name: 07 - Mock - Créer une réservation
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/reservations
+  body: json
+  auth: none
+}
+
+headers {
+  Accept: application/json
+  Content-Type: application/json
+  Authorization: Bearer {{mockToken}}
+}
+
+body:json {
+  {
+    "creneauId": "00000000-0000-4000-8000-000000000003"
+  }
+}
+
+tests {
+  test("La réservation renvoie 201 avec Location", function () {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getHeader("location")).to.be.a("string").and.not.empty;
+    expect(res.getBody().statut).to.equal("active");
+  });
+}
