@@ -10,6 +10,8 @@ servers:
 - url: http://localhost:3000
   description: Serveur de développement local
 tags:
+- name: Systeme
+  description: Disponibilité du serveur.
 - name: Salles
   description: Salles et occupation courante.
 - name: Cours
@@ -27,16 +29,36 @@ tags:
 - name: Passages
   description: Entrées enregistrées par les bornes.
 paths:
+  /health/live:
+    get:
+      operationId: verifierEtatServeur
+      tags: [Systeme]
+      summary: Vérifier que le serveur fonctionne
+      description: Sonde publique de disponibilité du processus, sans vérification de base de données.
+      security: []
+      responses:
+        '200':
+          description: Serveur disponible.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    const: ok
+              example:
+                status: ok
   /salles:
     get:
+      security: []
       operationId: listerSalles
       tags:
       - Salles
       summary: Lister les salles
-      description: 'Liste paginée, ordonnée par identifiant croissant. Rôles autorisés : adherent, admin.'
-      x-roles:
-      - adherent
-      - admin
+      description: Profil TP4 local sans authentification ; pagination par identifiant croissant pour les listes.
       x-idempotent: true
       parameters:
       - $ref: '#/components/parameters/RequestId'
@@ -77,6 +99,38 @@ paths:
                 page: 1
                 taille: 20
                 total: 1
+    post:
+      security: []
+      operationId: creerSalle
+      tags: [Salles]
+      summary: creer salle
+      description: Opération du CRUD TP4 local. Les champs inconnus et en lecture seule sont refusés en écriture.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreationSalle'
+            example:
+              nom: Salle Aix Centre
+              adresse: 10 avenue du Sport
+              capacite: 100
+      responses:
+        '201':
+          description: Opération effectuée.
+          headers:
+            Location:
+              description: URI de la ressource créée.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Salle'
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '404':
+          $ref: '#/components/responses/Introuvable'
   /cours:
     get:
       operationId: listerCours
@@ -125,14 +179,12 @@ paths:
                 total: 1
   /machines:
     get:
+      security: []
       operationId: listerMachines
       tags:
       - Machines
       summary: Lister les machines
-      description: 'Liste paginée, ordonnée par identifiant croissant. Rôles autorisés : adherent, admin.'
-      x-roles:
-      - adherent
-      - admin
+      description: Profil TP4 local sans authentification ; pagination par identifiant croissant pour les listes.
       x-idempotent: true
       parameters:
       - $ref: '#/components/parameters/RequestId'
@@ -178,6 +230,38 @@ paths:
                 page: 1
                 taille: 20
                 total: 1
+    post:
+      security: []
+      operationId: creerMachine
+      tags: [Machines]
+      summary: creer machine
+      description: Opération du CRUD TP4 local. Les champs inconnus et en lecture seule sont refusés en écriture.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreationMachine'
+            example:
+              salleId: null
+              nom: Vélo elliptique
+              statut: disponible
+      responses:
+        '201':
+          description: Opération effectuée.
+          headers:
+            Location:
+              description: URI de la ressource créée.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Machine'
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '404':
+          $ref: '#/components/responses/Introuvable'
   /salles/{salleId}/creneaux:
     get:
       operationId: listerCreneauxSalle
@@ -710,14 +794,12 @@ paths:
                 dateCreation: '2026-10-29T08:00:00+01:00'
   /machines/{machineId}:
     get:
+      security: []
       operationId: consulterMachine
       tags:
       - Machines
       summary: Consulter une machine
-      description: 'Consultation idempotente de la ressource. Rôles autorisés : adherent, admin.'
-      x-roles:
-      - adherent
-      - admin
+      description: Profil TP4 local sans authentification ; pagination par identifiant croissant pour les listes.
       x-idempotent: true
       parameters:
       - $ref: '#/components/parameters/RequestId'
@@ -744,6 +826,77 @@ paths:
               schema:
                 $ref: '#/components/schemas/Machine'
               example: *id007
+    put:
+      security: []
+      operationId: remplacerMachine
+      tags: [Machines]
+      summary: remplacer machine
+      description: Opération du CRUD TP4 local. Les champs inconnus et en lecture seule sont refusés en écriture.
+      parameters:
+      - $ref: '#/components/parameters/machineId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreationMachine'
+            example:
+              salleId: null
+              nom: Vélo elliptique
+              statut: disponible
+      responses:
+        '200':
+          description: Opération effectuée.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Machine'
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+    patch:
+      security: []
+      operationId: modifierMachine
+      tags: [Machines]
+      summary: modifier machine
+      description: Opération du CRUD TP4 local. Les champs inconnus et en lecture seule sont refusés en écriture.
+      parameters:
+      - $ref: '#/components/parameters/machineId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModificationMachine'
+            example:
+              statut: maintenance
+      responses:
+        '200':
+          description: Opération effectuée.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Machine'
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+    delete:
+      security: []
+      operationId: supprimerMachine
+      tags: [Machines]
+      summary: supprimer machine
+      description: Opération du CRUD TP4 local. Les champs inconnus et en lecture seule sont refusés en écriture.
+      parameters:
+      - $ref: '#/components/parameters/machineId'
+      responses:
+        '204':
+          description: Opération effectuée.
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '404':
+          $ref: '#/components/responses/Introuvable'
   /abonnements/{abonnementId}:
     get:
       operationId: consulterAbonnement
@@ -976,6 +1129,7 @@ paths:
               example: *id005
   /machines/{machineId}/compteur:
     put:
+      security: []
       operationId: mettreAJourCompteur
       tags:
       - Machines
@@ -1020,6 +1174,99 @@ paths:
             example:
               valeur: 43
               horodatage: '2026-10-29T08:00:00+01:00'
+  /salles/{salleId}:
+    get:
+      security: []
+      operationId: consulterSalle
+      tags: [Salles]
+      summary: consulter salle
+      description: Opération du CRUD TP4 local. Les champs inconnus et en lecture seule sont refusés en écriture.
+      parameters:
+      - $ref: '#/components/parameters/salleId'
+      responses:
+        '200':
+          description: Opération effectuée.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Salle'
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+    put:
+      security: []
+      operationId: remplacerSalle
+      tags: [Salles]
+      summary: remplacer salle
+      description: Opération du CRUD TP4 local. Les champs inconnus et en lecture seule sont refusés en écriture.
+      parameters:
+      - $ref: '#/components/parameters/salleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreationSalle'
+            example:
+              nom: Salle Aix Centre
+              adresse: 10 avenue du Sport
+              capacite: 100
+      responses:
+        '200':
+          description: Opération effectuée.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Salle'
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+    patch:
+      security: []
+      operationId: modifierSalle
+      tags: [Salles]
+      summary: modifier salle
+      description: Opération du CRUD TP4 local. Les champs inconnus et en lecture seule sont refusés en écriture.
+      parameters:
+      - $ref: '#/components/parameters/salleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModificationSalle'
+            example:
+              capacite: 80
+      responses:
+        '200':
+          description: Opération effectuée.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Salle'
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+    delete:
+      security: []
+      operationId: supprimerSalle
+      tags: [Salles]
+      summary: supprimer salle
+      description: Opération du CRUD TP4 local. Les champs inconnus et en lecture seule sont refusés en écriture.
+      parameters:
+      - $ref: '#/components/parameters/salleId'
+      responses:
+        '204':
+          description: Opération effectuée.
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '409':
+          $ref: '#/components/responses/Conflit'
 components:
   responses:
     Probleme:
@@ -1137,6 +1384,66 @@ components:
             detail: La limite de requêtes est atteinte. Réessayez dans 60 secondes.
             instance: /reservations
   schemas:
+    ModificationMachine:
+      type: object
+      additionalProperties: false
+      properties:
+        salleId:
+          type: [string, 'null']
+          format: uuid
+        nom:
+          type: string
+          minLength: 1
+          maxLength: 100
+        statut:
+          type: string
+          enum: [disponible, maintenance, hors_service]
+    CreationMachine:
+      type: object
+      additionalProperties: false
+      required: [salleId, nom, statut]
+      properties:
+        salleId:
+          type: [string, 'null']
+          format: uuid
+        nom:
+          type: string
+          minLength: 1
+          maxLength: 100
+        statut:
+          type: string
+          enum: [disponible, maintenance, hors_service]
+    ModificationSalle:
+      type: object
+      additionalProperties: false
+      properties:
+        nom:
+          type: string
+          minLength: 1
+          maxLength: 100
+        adresse:
+          type: string
+          minLength: 1
+          maxLength: 255
+        capacite:
+          type: integer
+          minimum: 1
+    CreationSalle:
+      type: object
+      additionalProperties: false
+      required: [nom, adresse, capacite]
+      properties:
+        nom:
+          type: string
+          minLength: 1
+          maxLength: 100
+        adresse:
+          type: string
+          minLength: 1
+          maxLength: 255
+        capacite:
+          type: integer
+          minimum: 1
     Probleme:
       type: object
       description: Format commun des erreurs. status doit correspondre au statut HTTP de la réponse. instance identifie
@@ -1170,6 +1477,18 @@ components:
           type: string
           format: uri-reference
           description: URI identifiant cette occurrence du problème.
+        errors:
+          type: array
+          description: Détail des champs invalides lors de la validation.
+          items:
+            type: object
+            additionalProperties: false
+            required: [champ, message]
+            properties:
+              champ:
+                type: string
+              message:
+                type: string
     Salle:
       type: object
       description: Salle de sport appartenant à la chaîne.
@@ -1617,6 +1936,10 @@ components:
         total:
           type: integer
           minimum: 0
+        pageSuivante:
+          description: Numéro à passer dans page avec les mêmes filtres et taille ; null en fin de liste.
+          type: [integer, 'null']
+          minimum: 1
     CoursPage:
       type: object
       description: Page de résultats ; page vide si aucun élément ne correspond.
@@ -1665,6 +1988,10 @@ components:
         total:
           type: integer
           minimum: 0
+        pageSuivante:
+          description: Numéro à passer dans page avec les mêmes filtres et taille ; null en fin de liste.
+          type: [integer, 'null']
+          minimum: 1
     CreneauPage:
       type: object
       description: Page de résultats ; page vide si aucun élément ne correspond.
@@ -1902,3 +2229,11 @@ components:
       example: 60
 security:
 - bearerAuth: []
+
+x-tp4-demo:
+  activation: TP4_DEMO=1 via npm run start:demo dans server/
+  description: Registre local de jetons fictifs et créneaux futurs pour rejouer les scénarios Bruno S3. Désactivé par défaut.
+  operations: [creerReservation, consulterReservation]
+  jetonAdherent: demo-local-only
+  creneauId: 00000000-0000-4000-8000-000000000003
+  limites: Authentification et abonnements de production à intégrer. Stockage volatil dans un processus unique.
