@@ -4,11 +4,7 @@ export class ErreurMetier extends Error {
     message: string,
     public readonly type: string,
     public readonly titre: string,
-    public readonly erreurs?: Array<{
-      champ: string;
-      message: string;
-    }>,
-    public readonly headers?: Record<string, string>,
+    public readonly erreurs?: Array<{ champ: string; message: string }>,
   ) {
     super(message);
     this.name = 'ErreurMetier';

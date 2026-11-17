@@ -1,13 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { ErreurMetier } from '../common/errors/erreur-metier.js';
-import { paginerResultatPivot } from '../common/pagination/pagination.js';
-import { MachinesRepository } from '../machines/machines.repository.js';
-import { SallesRepository } from './salles.repository.js';
-import type {
-  CreationSalle,
-  ModificationSalle,
-  Salle,
-} from './salles.types.js';
+import { ErreurMetier } from '../common/errors/erreur-metier';
+import { paginerResultatPivot } from '../common/pagination/pagination';
+import { MachinesRepository } from '../donnees/machines.repository';
+import { SallesRepository } from '../donnees/salles.repository';
+import type { CreationSalle, ModificationSalle, Salle } from './salles.types';
 
 @Injectable()
 export class SallesService {
@@ -17,24 +13,7 @@ export class SallesService {
   ) {}
 
   lister(page: number, taille: number) {
-    try {
-      return paginerResultatPivot(this.repository.lister(), page, taille);
-    } catch (erreur) {
-      if (!(erreur instanceof RangeError)) throw erreur;
-      throw new ErreurMetier(
-        400,
-        'Les paramètres de pagination sont invalides.',
-        'https://api.mawo.local/problems/pagination-invalide',
-        'Pagination invalide',
-        [
-          {
-            champ: 'page/ taille',
-            message:
-              'La page doit être >= 1 et la taille comprise entre 1 et 100.',
-          },
-        ],
-      );
-    }
+    return paginerResultatPivot(this.repository.lister(), page, taille);
   }
 
   trouverParId(id: string): Salle {
@@ -43,7 +22,7 @@ export class SallesService {
     if (!salle) {
       throw new ErreurMetier(
         404,
-        `Aucune salle trouvée avec l’identifiant ${id}.`,
+        `Aucune salle trouvée avec l'identifiant ${id}.`,
         'https://api.mawo.local/problems/salle-introuvable',
         'Salle introuvable',
       );
@@ -56,6 +35,11 @@ export class SallesService {
     return this.repository.creer(donnees);
   }
 
+  remplacer(id: string, donnees: CreationSalle): Salle {
+    this.trouverParId(id);
+    return this.repository.modifier(id, donnees)!;
+  }
+
   modifier(id: string, donnees: ModificationSalle): Salle {
     this.trouverParId(id);
     return this.repository.modifier(id, donnees)!;
@@ -63,6 +47,7 @@ export class SallesService {
 
   supprimer(id: string): void {
     this.trouverParId(id);
+
     if (this.machinesRepository.lister(id).length > 0) {
       throw new ErreurMetier(
         409,
@@ -71,6 +56,7 @@ export class SallesService {
         'Salle contenant des machines',
       );
     }
+
     this.repository.supprimer(id);
   }
 }

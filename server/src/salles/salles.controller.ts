@@ -1,4 +1,3 @@
-import { PaginationDto } from '../common/pagination/pagination.dto.js';
 import {
   Body,
   Controller,
@@ -15,8 +14,10 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { SallesService } from './salles.service.js';
-import { CreationSalleDto, ModificationSalleDto } from './salles.dto.js';
+import { PaginationDto } from '../common/pagination/pagination.dto';
+import { CreationSalleDto } from './dto/creation-salle.dto';
+import { ModificationSalleDto } from './dto/modification-salle.dto';
+import { SallesService } from './salles.service';
 
 @Controller('salles')
 export class SallesController {
@@ -28,7 +29,7 @@ export class SallesController {
   }
 
   @Get(':salleId')
-  trouverParId(@Param('salleId', new ParseUUIDPipe()) salleId: string) {
+  trouverParId(@Param('salleId', ParseUUIDPipe) salleId: string) {
     return this.service.trouverParId(salleId);
   }
 
@@ -45,15 +46,15 @@ export class SallesController {
 
   @Put(':salleId')
   remplacer(
-    @Param('salleId', new ParseUUIDPipe()) salleId: string,
+    @Param('salleId', ParseUUIDPipe) salleId: string,
     @Body() donnees: CreationSalleDto,
   ) {
-    return this.service.modifier(salleId, donnees);
+    return this.service.remplacer(salleId, donnees);
   }
 
   @Patch(':salleId')
   modifier(
-    @Param('salleId', new ParseUUIDPipe()) salleId: string,
+    @Param('salleId', ParseUUIDPipe) salleId: string,
     @Body() donnees: ModificationSalleDto,
   ) {
     return this.service.modifier(salleId, donnees);
@@ -61,7 +62,7 @@ export class SallesController {
 
   @Delete(':salleId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  supprimer(@Param('salleId', new ParseUUIDPipe()) salleId: string) {
+  supprimer(@Param('salleId', ParseUUIDPipe) salleId: string): void {
     this.service.supprimer(salleId);
   }
 }

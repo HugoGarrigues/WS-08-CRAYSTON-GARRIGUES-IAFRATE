@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import type {
   CreationMachine,
   Machine,
   ModificationMachine,
-} from './machines.types.js';
+} from '../machines/machines.types';
 
 @Injectable()
 export class MachinesRepository {
@@ -11,10 +12,7 @@ export class MachinesRepository {
 
   lister(salleId?: string): Machine[] {
     return [...this.machines.values()]
-      .filter(
-        (machine) =>
-          salleId === undefined || machine.salleId === salleId,
-      )
+      .filter((machine) => salleId === undefined || machine.salleId === salleId)
       .sort((a, b) => a.id.localeCompare(b.id));
   }
 
@@ -24,7 +22,7 @@ export class MachinesRepository {
 
   creer(donnees: CreationMachine): Machine {
     const machine: Machine = {
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       ...donnees,
       compteurUtilisations: 0,
       dateCreation: new Date().toISOString(),
@@ -34,21 +32,15 @@ export class MachinesRepository {
     return machine;
   }
 
-  modifier(
-    id: string,
-    donnees: ModificationMachine,
-  ): Machine | undefined {
+  modifier(id: string, donnees: ModificationMachine): Machine | undefined {
     const machineExistante = this.machines.get(id);
 
     if (!machineExistante) {
       return undefined;
     }
 
-    // Ne pas écraser les propriétés existantes avec undefined.
     const donneesDefinies = Object.fromEntries(
-      Object.entries(donnees).filter(
-        ([, valeur]) => valeur !== undefined,
-      ),
+      Object.entries(donnees).filter(([, valeur]) => valeur !== undefined),
     ) as ModificationMachine;
 
     const machineModifiee: Machine = {
@@ -60,14 +52,7 @@ export class MachinesRepository {
     return machineModifiee;
   }
 
-  supprimer(id: string): boolean {
-    return this.machines.delete(id);
-  }
-
-  mettreAJourCompteur(
-    id: string,
-    compteur: number,
-  ): Machine | undefined {
+  mettreAJourCompteur(id: string, valeur: number): Machine | undefined {
     const machine = this.machines.get(id);
 
     if (!machine) {
@@ -76,10 +61,14 @@ export class MachinesRepository {
 
     const machineMiseAJour: Machine = {
       ...machine,
-      compteurUtilisations: compteur,
+      compteurUtilisations: valeur,
     };
 
     this.machines.set(id, machineMiseAJour);
     return machineMiseAJour;
+  }
+
+  supprimer(id: string): boolean {
+    return this.machines.delete(id);
   }
 }

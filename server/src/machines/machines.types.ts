@@ -1,7 +1,4 @@
-export type StatutMachine =
-  | 'disponible'
-  | 'maintenance'
-  | 'hors_service';
+export type StatutMachine = 'disponible' | 'maintenance' | 'hors_service';
 
 export interface Machine {
   id: string;

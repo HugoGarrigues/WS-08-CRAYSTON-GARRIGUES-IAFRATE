@@ -1,30 +1,39 @@
-import { HealthController } from './health.controller.js';
-import { ReservationsController } from './reservations/reservations.controller.js';
-import { ReservationsRepository } from './reservations/reservations.repository.js';
-import { ReservationsService } from './reservations/reservations.service.js';
+import {
+  BadRequestException,
+  ValidationPipe,
+  type ValidationPipeOptions,
+} from '@nestjs/common';
+import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { Module } from '@nestjs/common';
-import { SallesController } from './salles/salles.controller.js';
-import { SallesRepository } from './salles/salles.repository.js';
-import { SallesService } from './salles/salles.service.js';
-import { MachinesController } from './machines/machines.controller.js';
-import { MachinesRepository } from './machines/machines.repository.js';
-import { MachinesService } from './machines/machines.service.js';
+import { erreursValidation } from './common/validation/erreurs-validation';
+import { ProblemDetailsFilter } from './common/errors/problem-details.filter';
+import { MachinesModule } from './machines/machines.module';
+import { ReservationsModule } from './reservations/reservations.module';
+import { SallesModule } from './salles/salles.module';
+
+const optionsValidation: ValidationPipeOptions = {
+  transform: true,
+  whitelist: true,
+  forbidNonWhitelisted: true,
+  forbidUnknownValues: true,
+  exceptionFactory: (erreurs) =>
+    new BadRequestException({
+      message: 'Les données envoyées sont invalides.',
+      errors: erreursValidation(erreurs),
+    }),
+};
 
 @Module({
-  imports: [],
-  controllers: [
-    HealthController,
-    SallesController,
-    MachinesController,
-    ReservationsController,
-  ],
+  imports: [SallesModule, MachinesModule, ReservationsModule],
   providers: [
-    ReservationsRepository,
-    ReservationsService,
-    SallesRepository,
-    SallesService,
-    MachinesRepository,
-    MachinesService,
+    {
+      provide: APP_PIPE,
+      useFactory: () => new ValidationPipe(optionsValidation),
+    },
+    {
+      provide: APP_FILTER,
+      useClass: ProblemDetailsFilter,
+    },
   ],
 })
 export class AppModule {}

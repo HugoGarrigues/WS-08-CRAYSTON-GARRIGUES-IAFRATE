@@ -1,8 +1,5 @@
-import { ListeMachinesDto } from '../common/pagination/pagination.dto.js';
 import {
   Body,
-  UnprocessableEntityException,
-  ValidationPipe,
   Controller,
   Delete,
   Get,
@@ -15,15 +12,16 @@ import {
   Put,
   Query,
   Res,
+  UnprocessableEntityException,
+  ValidationPipe,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { erreursValidation } from '../common/configurer-application.js';
-import { MachinesService } from './machines.service.js';
-import {
-  CreationMachineDto,
-  ModificationMachineDto,
-  MiseAJourCompteurDto,
-} from './machines.dto.js';
+import { ListeMachinesDto } from '../common/pagination/pagination.dto';
+import { erreursValidation } from '../common/validation/erreurs-validation';
+import { CreationMachineDto } from './dto/creation-machine.dto';
+import { MiseAJourCompteurDto } from './dto/mise-a-jour-compteur.dto';
+import { ModificationMachineDto } from './dto/modification-machine.dto';
+import { MachinesService } from './machines.service';
 
 @Controller('machines')
 export class MachinesController {
@@ -35,7 +33,7 @@ export class MachinesController {
   }
 
   @Get(':machineId')
-  trouverParId(@Param('machineId', new ParseUUIDPipe()) machineId: string) {
+  trouverParId(@Param('machineId', ParseUUIDPipe) machineId: string) {
     return this.service.trouverParId(machineId);
   }
 
@@ -52,15 +50,15 @@ export class MachinesController {
 
   @Put(':machineId')
   remplacer(
-    @Param('machineId', new ParseUUIDPipe()) machineId: string,
+    @Param('machineId', ParseUUIDPipe) machineId: string,
     @Body() donnees: CreationMachineDto,
   ) {
-    return this.service.modifier(machineId, donnees);
+    return this.service.remplacer(machineId, donnees);
   }
 
   @Patch(':machineId')
   modifier(
-    @Param('machineId', new ParseUUIDPipe()) machineId: string,
+    @Param('machineId', ParseUUIDPipe) machineId: string,
     @Body() donnees: ModificationMachineDto,
   ) {
     return this.service.modifier(machineId, donnees);
@@ -69,7 +67,7 @@ export class MachinesController {
   @Put(':machineId/compteur')
   @HttpCode(HttpStatus.NO_CONTENT)
   mettreAJourCompteur(
-    @Param('machineId', new ParseUUIDPipe()) machineId: string,
+    @Param('machineId', ParseUUIDPipe) machineId: string,
     @Body(
       new ValidationPipe({
         expectedType: MiseAJourCompteurDto,
@@ -85,18 +83,14 @@ export class MachinesController {
       }),
     )
     corps: unknown,
-  ) {
+  ): void {
     const donnees = corps as MiseAJourCompteurDto;
-    this.service.mettreAJourCompteur(
-      machineId,
-      donnees.valeur,
-      donnees.horodatage,
-    );
+    this.service.mettreAJourCompteur(machineId, donnees.valeur);
   }
 
   @Delete(':machineId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  supprimer(@Param('machineId', new ParseUUIDPipe()) machineId: string): void {
+  supprimer(@Param('machineId', ParseUUIDPipe) machineId: string): void {
     this.service.supprimer(machineId);
   }
 }

@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  Headers,
   HttpCode,
   HttpStatus,
   Param,
@@ -11,8 +10,8 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { CreationReservationDto } from './reservations.dto.js';
-import { ReservationsService } from './reservations.service.js';
+import { CreationReservationDto } from './dto/creation-reservation.dto';
+import { ReservationsService } from './reservations.service';
 
 @Controller('reservations')
 export class ReservationsController {
@@ -22,19 +21,15 @@ export class ReservationsController {
   @HttpCode(HttpStatus.CREATED)
   creer(
     @Body() donnees: CreationReservationDto,
-    @Headers('authorization') authorization: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const reservation = this.service.creer(donnees.creneauId, authorization);
+    const reservation = this.service.creer(donnees.creneauId);
     response.location(`/reservations/${reservation.id}`);
     return reservation;
   }
 
   @Get(':reservationId')
-  trouverParId(
-    @Param('reservationId', new ParseUUIDPipe()) id: string,
-    @Headers('authorization') authorization?: string,
-  ) {
-    return this.service.trouverParId(id, authorization);
+  trouverParId(@Param('reservationId', ParseUUIDPipe) reservationId: string) {
+    return this.service.trouverParId(reservationId);
   }
 }

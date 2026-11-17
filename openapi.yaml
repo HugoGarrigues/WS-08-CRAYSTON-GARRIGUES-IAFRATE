@@ -10,8 +10,6 @@ servers:
 - url: http://localhost:3000
   description: Serveur de développement local
 tags:
-- name: Systeme
-  description: Disponibilité du serveur.
 - name: Salles
   description: Salles et occupation courante.
 - name: Cours
@@ -29,28 +27,6 @@ tags:
 - name: Passages
   description: Entrées enregistrées par les bornes.
 paths:
-  /health/live:
-    get:
-      operationId: verifierEtatServeur
-      tags: [Systeme]
-      summary: Vérifier que le serveur fonctionne
-      description: Sonde publique de disponibilité du processus, sans vérification de base de données.
-      security: []
-      responses:
-        '200':
-          description: Serveur disponible.
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: false
-                required: [status]
-                properties:
-                  status:
-                    type: string
-                    const: ok
-              example:
-                status: ok
   /salles:
     get:
       security: []
@@ -2229,11 +2205,3 @@ components:
       example: 60
 security:
 - bearerAuth: []
-
-x-tp4-demo:
-  activation: TP4_DEMO=1 via npm run start:demo dans server/
-  description: Registre local de jetons fictifs et créneaux futurs pour rejouer les scénarios Bruno S3. Désactivé par défaut.
-  operations: [creerReservation, consulterReservation]
-  jetonAdherent: demo-local-only
-  creneauId: 00000000-0000-4000-8000-000000000003
-  limites: Authentification et abonnements de production à intégrer. Stockage volatil dans un processus unique.

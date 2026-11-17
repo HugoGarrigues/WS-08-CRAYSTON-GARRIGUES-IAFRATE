@@ -1,20 +1,13 @@
-import { Transform } from 'class-transformer';
-import { IsInt, IsUUID, Max, Min, ValidateIf } from 'class-validator';
-
-function entierStrict({ value }: { value: unknown }): number {
-  return typeof value === 'string' && /^[1-9][0-9]*$/.test(value)
-    ? Number(value)
-    : NaN;
-}
+import { Type } from 'class-transformer';
+import { IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
 
 export class PaginationDto {
-  @Transform(entierStrict)
+  @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(Number.MAX_SAFE_INTEGER)
   page = 1;
 
-  @Transform(entierStrict)
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(100)
@@ -22,7 +15,7 @@ export class PaginationDto {
 }
 
 export class ListeMachinesDto extends PaginationDto {
-  @ValidateIf((_objet, valeur) => valeur !== undefined)
+  @IsOptional()
   @IsUUID()
   salle?: string;
 }

@@ -1,18 +1,17 @@
 import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import type {
   CreationSalle,
   ModificationSalle,
   Salle,
-} from './salles.types.js';
+} from '../salles/salles.types';
 
 @Injectable()
 export class SallesRepository {
   private readonly salles = new Map<string, Salle>();
 
   lister(): Salle[] {
-    return [...this.salles.values()].sort((a, b) =>
-      a.id.localeCompare(b.id),
-    );
+    return [...this.salles.values()].sort((a, b) => a.id.localeCompare(b.id));
   }
 
   trouverParId(id: string): Salle | undefined {
@@ -21,7 +20,7 @@ export class SallesRepository {
 
   creer(donnees: CreationSalle): Salle {
     const salle: Salle = {
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       ...donnees,
       dateCreation: new Date().toISOString(),
     };
@@ -30,21 +29,15 @@ export class SallesRepository {
     return salle;
   }
 
-  modifier(
-    id: string,
-    donnees: ModificationSalle,
-  ): Salle | undefined {
+  modifier(id: string, donnees: ModificationSalle): Salle | undefined {
     const salleExistante = this.salles.get(id);
 
     if (!salleExistante) {
       return undefined;
     }
 
-    // Ignorer les propriétés absentes pour préserver les valeurs existantes.
     const donneesDefinies = Object.fromEntries(
-      Object.entries(donnees).filter(
-        ([, valeur]) => valeur !== undefined,
-      ),
+      Object.entries(donnees).filter(([, valeur]) => valeur !== undefined),
     ) as ModificationSalle;
 
     const salleModifiee: Salle = {
