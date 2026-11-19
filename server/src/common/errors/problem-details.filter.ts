@@ -23,6 +23,8 @@ function titrePourStatut(status: number): string {
       return 'Accès interdit';
     case 404:
       return 'Ressource introuvable';
+    case 405:
+      return 'Méthode non autorisée';
     case 409:
       return 'Conflit';
     case 422:

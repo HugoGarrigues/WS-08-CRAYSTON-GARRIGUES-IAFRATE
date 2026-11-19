@@ -1,3 +1,4 @@
+import { verifierContratHttp } from './common/contrat-http.middleware';
 import type { NestApplicationOptions } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, type OpenAPIObject } from '@nestjs/swagger';
@@ -20,9 +21,7 @@ const OPERATIONS_IMPLEMENTEES: Record<string, string[]> = {
 export function filtrerContrat(contrat: OpenAPIObject): OpenAPIObject {
   const paths: Record<string, unknown> = {};
 
-  for (const [chemin, methodes] of Object.entries(
-    OPERATIONS_IMPLEMENTEES,
-  )) {
+  for (const [chemin, methodes] of Object.entries(OPERATIONS_IMPLEMENTEES)) {
     const element = contrat.paths?.[chemin];
 
     if (!element) {
@@ -51,9 +50,9 @@ export async function buildApp(options: NestApplicationOptions = {}) {
     readFileSync(join(__dirname, '..', '..', 'openapi.yaml'), 'utf8'),
   ) as OpenAPIObject;
   const document =
-    process.env.SWAGGER_COMPLET === '1'
-      ? contrat
-      : filtrerContrat(contrat);
+    process.env.SWAGGER_COMPLET === '1' ? contrat : filtrerContrat(contrat);
+  // Même périmètre que le serveur, même si Swagger affiche le contrat futur complet.
+  app.use(verifierContratHttp(filtrerContrat(contrat)));
   SwaggerModule.setup('api', app, document);
 
   await app.init();

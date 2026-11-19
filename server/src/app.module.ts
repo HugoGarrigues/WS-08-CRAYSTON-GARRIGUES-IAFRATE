@@ -1,7 +1,7 @@
+import { ValidationEntreesPipe } from './common/validation/validation-entrees.pipe';
 import { HealthController } from './health.controller';
 import {
   BadRequestException,
-  ValidationPipe,
   type ValidationPipeOptions,
 } from '@nestjs/common';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
@@ -30,7 +30,7 @@ const optionsValidation: ValidationPipeOptions = {
   providers: [
     {
       provide: APP_PIPE,
-      useFactory: () => new ValidationPipe(optionsValidation),
+      useFactory: () => new ValidationEntreesPipe(optionsValidation),
     },
     {
       provide: APP_FILTER,

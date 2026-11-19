@@ -439,6 +439,7 @@ paths:
                 taille: 20
                 total: 1
     post:
+      security: []
       operationId: creerReservation
       tags:
       - Reservations
@@ -1018,6 +1019,7 @@ paths:
                 reinitialisation: '2026-10-30T00:00:00+01:00'
   /reservations/{reservationId}:
     get:
+      security: []
       operationId: consulterReservation
       tags:
       - Reservations
