@@ -11,6 +11,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -20,7 +22,19 @@ jobs:
         run: npm ci
         working-directory: server
       - name: Vérifier le contrat OpenAPI
-        run: npx --yes @stoplight/spectral-cli lint openapi.yaml
+        run: npx --yes @stoplight/spectral-cli lint openapi.yaml openapi-v2.yaml
+      - name: Protéger la v2 publiée sur main contre les ruptures
+        run: |
+          git fetch origin main
+          git rev-parse --verify origin/main
+          if git cat-file -e origin/main:openapi-v2.yaml 2>/dev/null; then
+            mkdir -p tmp/tp6
+            git show origin/main:openapi-v2.yaml > tmp/tp6/openapi-v2-main.yaml
+            docker run --rm -v "$PWD":/specs:ro -w /specs tufin/oasdiff \
+              breaking tmp/tp6/openapi-v2-main.yaml openapi-v2.yaml --fail-on ERR
+          else
+            echo "Première publication v2 : aucun contrat v2 sur main à comparer. Les deux contrats sont validés par Spectral."
+          fi
       - name: Vérifier le code
         run: npm run lint
         working-directory: server
@@ -51,7 +65,8 @@ jobs:
       - name: Vérifier le contrat avec Schemathesis
         run: |
           docker run --rm --network host -v "$PWD":/specs:ro \
-            ghcr.io/schemathesis/schemathesis:4.33.4 \
+            -e SCHEMATHESIS_HOOKS=/specs/server/test/schemathesis_hooks.py \
+            ghcr.io/schemathesis/schemathesis:4.33.4 --config-file /specs/schemathesis.toml \
             run /specs/tmp/tp5/openapi-implemented.json \
             --url http://localhost:3000 --checks all \
             --max-examples 20 --seed 20261119 --generation-database none

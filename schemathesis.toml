@@ -1,0 +1,11 @@
+# Les préconditions HTTP du PATCH de créneau peuvent échouer même si les données
+# respectent leur schéma. Les adaptations ciblées sont documentées ci-dessous.
+[[operations]]
+include-name = "PATCH /creneaux/{creneauId}"
+checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "401", "403", "404", "409", "412", "429", "5xx"]
+checks.negative_data_rejection.expected-statuses = ["400", "401", "403", "404", "405", "406", "409", "412", "415", "422", "428", "429", "5xx"]
+checks.missing_required_header.expected-statuses = ["400", "401", "403", "406", "415", "422", "428"]
+
+# Le hook filter_failure ne classe ST302 comme faux positif sur une écriture
+# machine que si le problème est salle-introuvable ET une vraie relecture GET
+# retrouve cette machine. Aucun contrôle n’est désactivé.

@@ -273,7 +273,8 @@ Depuis la racine, sous Linux :
 
 ```sh
 docker run --rm --network host -v "$PWD":/specs:ro \
-  ghcr.io/schemathesis/schemathesis:4.33.4 \
+  -e SCHEMATHESIS_HOOKS=/specs/server/test/schemathesis_hooks.py \
+  ghcr.io/schemathesis/schemathesis:4.33.4 --config-file /specs/schemathesis.toml \
   run /specs/tmp/tp5/openapi-implemented.json \
   --url http://localhost:3000 --checks all \
   --max-examples 20 --seed 20261119 --generation-database none
@@ -283,7 +284,8 @@ Sous PowerShell avec Docker Desktop, utiliser la racine du dépôt :
 
 ```powershell
 docker run --rm -v "${PWD}:/specs:ro" `
-  ghcr.io/schemathesis/schemathesis:4.33.4 `
+  -e SCHEMATHESIS_HOOKS=/specs/server/test/schemathesis_hooks.py `
+  ghcr.io/schemathesis/schemathesis:4.33.4 --config-file /specs/schemathesis.toml `
   run /specs/tmp/tp5/openapi-implemented.json `
   --url http://host.docker.internal:3000 --checks all `
   --max-examples 20 --seed 20261119 --generation-database none
@@ -334,3 +336,118 @@ un passage local réussi ne prouve pas un pipeline distant vert.
 actuellement un entier, par un objet obligatoire distinguant capacité totale et
 capacité accessible. Cela casserait les clients v1 et demanderait une stratégie
 de versionnement. Cette évolution n’est pas implémentée dans le TP5.
+
+## TP6 / S6 — Contrat v2, dépréciation et ETag
+
+Base : branche `feat/tp-05-tests`, commit `47fff13`. La branche de travail S6
+est `feat/tp-06-versioning-cache`. Le périmètre suit les livrables obligatoires :
+contrat v2, rapport oasdiff commenté, ADR, dépréciation v1 et ETag sur un créneau.
+Les routes v2 et le suivi des appels v1 sont optionnels et ne sont pas ajoutés.
+
+### Deux contrats, v1 conservée
+
+- `openapi.yaml` reste en `1.0.0`. Les URI existantes ne reçoivent aucun préfixe
+  `/v1` et les salles gardent une capacité entière.
+- `openapi-v2.yaml` annonce `2.0.0` et une base URI `/v2`. La capacité des salles
+  devient `{totale, accessible}` dans les représentations et corps d’écriture.
+  C’est l’évolution cassante préparée en S5, autorisée par l’énoncé S6.
+- La fonction principale **`figerContratPivot`**, référence **NC-206**, produit
+  une copie indépendante de la v1. La commande explicite ci-dessous régénère
+  ce contrat v2 initial ; elle n’est pas exécutée automatiquement en CI pour
+  ne pas effacer de futures modifications de la v2 avant leur comparaison.
+
+```sh
+cd server
+npm run contract:v2
+```
+
+Le rapport [docs/oasdiff-v1-v2.md](docs/oasdiff-v1-v2.md) contient la sortie réelle
+oasdiff, le code attendu `1` et un commentaire sous chacun des 19 constats.
+L’[ADR 0001](docs/adr/0001-versioning.md), accepté le 19 novembre 2026, compare
+préfixe URI, en-tête et media type, puis précise les conséquences du choix URI.
+
+### Dépréciation de la v1
+
+Les réponses sur les chemins v1 portent, y compris sur erreur et 304 :
+
+```http
+Deprecation: @1795046400
+Sunset: Wed, 30 Jun 2027 23:59:59 GMT
+Link: </v2/salles>; rel="successor-version"
+```
+
+Le lien s’adapte à la ressource et conserve les paramètres de requête.
+`dateStampVersionPivot` (**NC-106**, support S6) calcule la date structurée
+RFC 9745. Les opérations v1 sont `deprecated: true`. La v2 est publiée comme
+contrat uniquement ; les liens annoncent ses futures routes, pas une v2 déjà
+exécutée. Le serveur ne coupe pas automatiquement la v1 à la date Sunset.
+
+```sh
+curl -i http://localhost:3000/salles
+```
+
+### Créneau protégé par ETag
+
+Le sujet Sport demande de protéger un **créneau**. Deux opérations minimales
+sont ajoutées, sans nouveau CRUD complet :
+
+| Opération | Comportement |
+| --- | --- |
+| GET `/creneaux/{creneauId}` | 200 avec ETag fort et `Cache-Control: no-cache` ; `If-None-Match` courant → 304 sans corps |
+| PATCH `/creneaux/{creneauId}` | Modifie seulement `libelle` ; `If-Match` absent → 428, périmé/faible → 412, courant → 200 et nouvel ETag |
+
+Les quatre UUID mémoire déjà utilisés par les réservations sont conservés et
+partagent désormais le même repository de créneaux. Exemple :
+`00000000-0000-4000-8000-000000000003`. Pour le test à deux clients, copier l’ETag
+renvoyé par GET et l’envoyer exactement, guillemets compris, dans If-Match :
+
+```sh
+curl -i http://localhost:3000/creneaux/00000000-0000-4000-8000-000000000003
+# Remplacer la valeur ci-dessous par l’ETag réellement lu.
+curl -i -X PATCH http://localhost:3000/creneaux/00000000-0000-4000-8000-000000000003 -H 'Content-Type: application/json' -H 'If-Match: "ETAG_LU"' -d '{"libelle":"Choix du client A"}'
+```
+
+Le contrôle et l’écriture sont synchrones dans le processus mémoire. Une future
+base partagée devra effectuer cette comparaison atomiquement côté stockage.
+
+### Vérifications et CI
+
+```sh
+cd server
+npm test
+npm run lint
+# À la racine
+npx @stoplight/spectral-cli lint openapi.yaml openapi-v2.yaml
+```
+
+La CI conserve ses deux jobs. Le lint valide les deux fichiers. Le job `test`
+compare aussi `openapi-v2.yaml` à sa version sur `origin/main` avec oasdiff et
+échoue si la v2 publiée est cassée. Il ne compare pas v1-v2 en CI : leur rupture
+est volontaire. Au premier ajout, si main ne contient pas encore de v2, cette
+initialisation est indiquée explicitement. Les comparaisons s’appliquent après
+publication de la v2 sur main.
+
+Le job de contrat continue de tester la v1 implémentée (18 opérations), pas les
+routes v2 optionnelles. `schemathesis.toml` reconnaît 412 et 428 sur le PATCH de
+créneau. Tous les contrôles sont actifs. Le hook `filter_failure` traite une
+ambiguïté du contrôle ST302 sur PUT/PATCH machine : un 404 `salle-introuvable`
+n’est filtré que si une requête GET réelle retrouve immédiatement la machine.
+Une disparition réelle, un autre problème ou une panne reste un échec.
+Le refus d’une salle absente et la conservation de la machine sont également
+vérifiés par un test d’intégration ; aucun comportement v1 n’a été changé pour
+satisfaire l’outil.
+
+| Vérification locale du 19 novembre 2026 | Résultat |
+| --- | --- |
+| Tests d’intégration et régression | 46 réussis, dont 304, 412 à deux clients, 428 et en-têtes v1 |
+| Analyse statique | Réussie |
+| Spectral v1 et v2 | 0 erreur, 2 avertissements historiques par contrat |
+| oasdiff v1→v2 | Code 1 attendu, 19 constats commentés |
+| oasdiff v2 identique | Code 0 |
+| oasdiff rupture simulée dans une copie v2 | Code 1, suppression de GET /salles refusée |
+| Schemathesis v1 implémentée | 18/18 opérations ; 1 018 cas réussis ; 1 faux diagnostic filtré après relecture GET |
+| Compatibilité avec le contrat TP5 | Opérations, URI et schémas v1 inchangés hors métadonnées de dépréciation |
+
+La CI distante ne peut être confirmée verte qu’après publication autorisée de
+cette branche. `IA.md` déclare l’assistance reçue. Les commits et le push
+sont effectués uniquement après accord.

@@ -1,3 +1,4 @@
+import { deprecierV1 } from './common/versioning/deprecation.middleware';
 import { verifierContratHttp } from './common/contrat-http.middleware';
 import type { NestApplicationOptions } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -9,6 +10,7 @@ import { AppModule } from './app.module';
 
 const OPERATIONS_IMPLEMENTEES: Record<string, string[]> = {
   '/health/live': ['get'],
+  '/creneaux/{creneauId}': ['get', 'patch'],
   '/salles': ['get', 'post'],
   '/salles/{salleId}': ['get', 'put', 'patch', 'delete'],
   '/machines': ['get', 'post'],
@@ -52,6 +54,7 @@ export async function buildApp(options: NestApplicationOptions = {}) {
   const document =
     process.env.SWAGGER_COMPLET === '1' ? contrat : filtrerContrat(contrat);
   // Même périmètre que le serveur, même si Swagger affiche le contrat futur complet.
+  app.use(deprecierV1(contrat));
   app.use(verifierContratHttp(filtrerContrat(contrat)));
   SwaggerModule.setup('api', app, document);
 

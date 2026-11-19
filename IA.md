@@ -15,3 +15,6 @@
 | TP5 | `server/src/, server/test/` | Aide à la structure des tests d’intégration et à la correction des erreurs détectées par Schemathesis | OpenAI Codex | Matt Crayston | 19/11/2026 |
 | TP5 | `.github/workflows/ci.yml` | Aide à la configuration du pipeline CI : tests et vérification du contrat | OpenAI Codex | Matt Crayston | 19/11/2026 |
 | TP5 | `README.md, docs/tp5-schemathesis.md` | Aide à la documentation des commandes de test et des résultats | OpenAI Codex | Matt Crayston | 19/11/2026 |
+| TP6 | `openapi.yaml`, `openapi-v2.yaml`, `docs/` | Aide au contrat v2, à l’ADR et au rapport oasdiff | OpenAI Codex | Matt Crayston | 19/11/2026 |
+| TP6 | `server/src/`, `server/test/` | Aide à la dépréciation v1, aux ETag et aux tests de cache et concurrence | OpenAI Codex | Matt Crayston | 19/11/2026 |
+| TP6 | `.github/workflows/ci.yml`, `README.md` | Aide aux vérifications CI et à la documentation du TP6 | OpenAI Codex | Matt Crayston | 19/11/2026 |

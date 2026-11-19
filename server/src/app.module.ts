@@ -1,3 +1,4 @@
+import { CreneauxModule } from './creneaux/creneaux.module';
 import { ValidationEntreesPipe } from './common/validation/validation-entrees.pipe';
 import { HealthController } from './health.controller';
 import {
@@ -25,7 +26,7 @@ const optionsValidation: ValidationPipeOptions = {
 };
 
 @Module({
-  imports: [SallesModule, MachinesModule, ReservationsModule],
+  imports: [SallesModule, MachinesModule, ReservationsModule, CreneauxModule],
   controllers: [HealthController],
   providers: [
     {
