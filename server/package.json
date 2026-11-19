@@ -11,8 +11,10 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
-    "lint": "oxlint src",
-    "format": "prettier --write \"src/**/*.ts\""
+    "lint": "oxlint src test",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "contract:schema": "npm run build && node test/contract-schema.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
@@ -32,6 +34,7 @@
     "@types/node": "^24.0.0",
     "oxlint": "^1.90.0",
     "prettier": "^3.6.2",
+    "supertest": "^7.3.2",
     "typescript": "^6.0.3"
   }
 }

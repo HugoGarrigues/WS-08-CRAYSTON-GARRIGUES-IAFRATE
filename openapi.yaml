@@ -10,6 +10,8 @@ servers:
 - url: http://localhost:3000
   description: Serveur de développement local
 tags:
+- name: Systeme
+  description: Disponibilité du serveur.
 - name: Salles
   description: Salles et occupation courante.
 - name: Cours
@@ -27,6 +29,27 @@ tags:
 - name: Passages
   description: Entrées enregistrées par les bornes.
 paths:
+  /health/live:
+    get:
+      operationId: verifierEtatServeur
+      tags: [Systeme]
+      summary: Vérifier la disponibilité du serveur
+      description: Sonde publique utilisée par le job de contract testing du TP5.
+      security: []
+      responses:
+        '200':
+          description: Serveur disponible.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    const: ok
+              example: {status: ok}
   /salles:
     get:
       security: []

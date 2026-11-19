@@ -1,5 +1,7 @@
 # Projet Fil Rouge — Sujet 8 : Salle de sport connectée
 
+[![CI](https://github.com/HugoGarrigues/WS-08-CRAYSTON-GARRIGUES-IAFRATE/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/HugoGarrigues/WS-08-CRAYSTON-GARRIGUES-IAFRATE/actions/workflows/ci.yml?query=branch%3Amain)
+
 ## 👥 Membres du groupe et rôles de référents
 
 Tout le monde code sur l'ensemble des volets, avec un référent garant par domaine :
@@ -215,3 +217,120 @@ nécessaire.
 La vérification fonctionnelle de ce TP s'appuie sur Bruno et les appels HTTP
 manuels. Aucun test automatisé n'est ajouté ici pour ne pas empiéter sur le TP5.
 
+
+## TP5 / S5 — Tests d’intégration, contrat et CI
+
+Travail basé sur `main` (`fc3435a`), sans extension du périmètre métier du TP4.
+Le serveur existant expose 15 opérations métier ; la sonde `GET /health/live`
+complète ce périmètre pour l’attente de disponibilité demandée en CI.
+
+### Application testable et tests d’intégration
+
+`src/app.ts` exporte `buildApp()` : construction, validation globale, gestion des
+erreurs, Swagger et initialisation, sans appel à `listen`. `src/main.ts` est le
+seul point de démarrage réseau. `GET /health/live` répond `200` avec
+`{"status":"ok"}`.
+
+```sh
+cd server
+npm ci
+npm test
+```
+
+`npm test` compile puis exécute Node Test Runner avec Supertest, l’équivalent
+prévu pour la stack Express de NestJS. Les tests utilisent `app.getHttpServer()`
+sans démarrer de serveur avec `app.listen`. Chaque test construit une nouvelle
+application et la ferme ensuite : les repositories mémoire repartent de zéro.
+Supertest gère lui-même le serveur temporaire nécessaire à ses requêtes.
+
+| Endpoints implémentés | Couverture d’intégration |
+| --- | --- |
+| 6 opérations salles | Cas nominal et négatif pour GET liste/détail, POST, PUT, PATCH et DELETE ; conflit 409 à la suppression |
+| 7 opérations machines | Cas nominal et négatif du CRUD et du compteur, filtre, compteur invalide 422 et régression 409 |
+| 2 opérations réservations | Création 201 + Location, lecture ; corps invalide, champ inconnu et ressource absente |
+| GET /health/live | Corps nominal et méthode non autorisée |
+
+Les réponses négatives sont vérifiées en `application/problem+json`, avec le
+statut du problème et `errors` pour la validation 400. Les créations vérifient
+Location et la représentation complète ; les suppressions vérifient le corps vide.
+
+La fonction principale **`rejouerTestPivot`** (note interne **NC-205**) centralise
+l’exécution et les assertions HTTP. **`tracerScenarioPivot`** (**NC-105**, support
+S5) produit les traces méthode / URL / statut dans les diagnostics des tests.
+Ces deux fonctions sont réellement utilisées dans `server/test/helpers.mjs`.
+
+### Contract testing et défauts trouvés
+
+```sh
+# Terminal 1, dans server/
+npm run start:prod
+
+# Terminal 2, dans server/
+npm run contract:schema
+```
+
+Depuis la racine, sous Linux :
+
+```sh
+docker run --rm --network host -v "$PWD":/specs:ro \
+  ghcr.io/schemathesis/schemathesis:4.33.4 \
+  run /specs/tmp/tp5/openapi-implemented.json \
+  --url http://localhost:3000 --checks all \
+  --max-examples 20 --seed 20261119 --generation-database none
+```
+
+Sous PowerShell avec Docker Desktop, utiliser la racine du dépôt :
+
+```powershell
+docker run --rm -v "${PWD}:/specs:ro" `
+  ghcr.io/schemathesis/schemathesis:4.33.4 `
+  run /specs/tmp/tp5/openapi-implemented.json `
+  --url http://host.docker.internal:3000 --checks all `
+  --max-examples 20 --seed 20261119 --generation-database none
+```
+
+La première passe a bien utilisé le contrat racine complet. Elle a notamment
+trouvé `TRACE /salles` → 404 au lieu de 405. Les autres routes futures, absentes
+du TP4, produisent aussi des échecs. Pour tester toute l’implémentation existante
+sans développer d’autres ressources, `contract:schema` produit une projection
+à partir d’`openapi.yaml`, avec le même filtre que Swagger : **16 opérations sur
+31**, sans modifier leurs schémas. Les 15 opérations futures restent dans le
+contrat historique, mais ne sont pas déclarées testées.
+
+Tous les contrôles Schemathesis restent activés. Aucune liste d’échecs acceptés
+ni exclusion de contrôle n’est utilisée. La version et la graine sont fixées
+pour reproduire le passage. Les phases exemples, couverture, fuzzing et stateful
+sont exécutées. Une opération sans exemple explicite est sautée seulement dans
+la phase exemples ; elle est testée par les autres phases.
+
+Le diagnostic avant/après, les commandes curl et les tests de non-régression
+sont décrits dans [docs/tp5-schemathesis.md](docs/tp5-schemathesis.md).
+
+### Pipeline GitHub Actions
+
+`.github/workflows/ci.yml` contient exactement deux jobs, sur push et pull request :
+
+- `test` : installation, lint Spectral, analyse du code et `npm test` ;
+- `contract` : installation, compilation, préparation du contrat de test,
+  démarrage du serveur, attente avec curl sur `/health/live`, Schemathesis.
+
+Le badge en tête du README suit la branche `main`. **La validation GitHub doit
+encore être exécutée après publication et intégration des commits autorisés** :
+un passage local réussi ne prouve pas un pipeline distant vert.
+
+### Résultats locaux du 19 novembre 2026
+
+- `npm test` : **39 tests réussis**, données réinitialisées entre les tests.
+- `npm run lint` : réussi.
+- Schemathesis 4.33.4 : **928 cas réussis**, 16/16 opérations testées, aucun échec.
+- Les correctifs sont accompagnés de tests de régression et isolés
+  dans le commit `fix(s05)` demandé.
+- Aucun développement d’authentification, de quota ou de nouvelle ressource
+  métier n’est inclus dans ce TP5.
+
+### À préparer pour S6
+
+Évolution incompatible envisagée : remplacer le champ `capacite` des salles,
+actuellement un entier, par un objet obligatoire distinguant capacité totale et
+capacité accessible. Cela casserait les clients v1 et demanderait une stratégie
+de versionnement. Cette évolution n’est pas implémentée dans le TP5.

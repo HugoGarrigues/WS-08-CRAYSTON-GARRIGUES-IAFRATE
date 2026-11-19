@@ -1,3 +1,4 @@
+import { HealthController } from './health.controller';
 import {
   BadRequestException,
   ValidationPipe,
@@ -25,6 +26,7 @@ const optionsValidation: ValidationPipeOptions = {
 
 @Module({
   imports: [SallesModule, MachinesModule, ReservationsModule],
+  controllers: [HealthController],
   providers: [
     {
       provide: APP_PIPE,
